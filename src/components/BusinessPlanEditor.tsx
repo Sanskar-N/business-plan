@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Download, ArrowLeft, Upload, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import { BusinessPlanTemplate, BusinessPlanSection } from '../types/businessPlan';
@@ -18,20 +19,39 @@ export const BusinessPlanEditor: React.FC<BusinessPlanEditorProps> = ({ template
   const [jsonInput, setJsonInput] = useState('');
   const [showJsonInput, setShowJsonInput] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const [processedData, setProcessedData] = useState(() => {
-    // Initialize with sample data to demonstrate data flow
-    // In production, this would be: importAllPagesData(backendData)
-    return importAllPagesData({
-      // This empty object demonstrates how backend data would be passed
-      // The import functions will use their sample data as defaults
-    });
-  });
+  const [processedData, setProcessedData] = useState<any>(null);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const pageRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
+
+  // Load data on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoadingData(true);
+      try {
+        // Initialize with API data, fallback to empty structure
+        const data = await importAllPagesData({
+          // This empty object will trigger API calls with fallback to empty values
+        });
+        setProcessedData(data);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        // Fallback to empty structure if everything fails
+        const emptyData = await importAllPagesData({});
+        setProcessedData(emptyData);
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   const totalPages = 13;
   
   // Get current section with processed data
   const getCurrentSectionWithProcessedData = () => {
+    if (!processedData) return null;
+    
     const baseSection = sections.find(section => section.pageNumber === currentPage);
     if (!baseSection) return null;
 
@@ -97,9 +117,21 @@ export const BusinessPlanEditor: React.FC<BusinessPlanEditorProps> = ({ template
     try {
       const jsonData = JSON.parse(jsonInput);
       
-      // Process the JSON data through import functions
-      const newProcessedData = importAllPagesData(jsonData);
-      setProcessedData(newProcessedData);
+      // Process the JSON data through import functions (async)
+      const loadNewData = async () => {
+        setIsLoadingData(true);
+        try {
+          const newProcessedData = await importAllPagesData(jsonData);
+          setProcessedData(newProcessedData);
+        } catch (error) {
+          console.error('Error processing JSON data:', error);
+          alert('Error processing JSON data. Please check the format and try again.');
+        } finally {
+          setIsLoadingData(false);
+        }
+      };
+      
+      loadNewData();
       
       // Update sections with new processed data
       setSections(prevSections => 
@@ -252,6 +284,13 @@ export const BusinessPlanEditor: React.FC<BusinessPlanEditorProps> = ({ template
   };
 
   const currentSection = getCurrentSectionWithProcessedData();
+
+  // Show loading state
+  if (isLoadingData) {
+    return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
+      <div className="text-xl text-gray-600">Loading business plan data...</div>
+    </div>;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
