@@ -61,7 +61,7 @@ export interface FundingAllocation {
 }
 
 // API configuration
-const API_BASE_URL = process.env.VITE_API_BASE_URL || 'https://api.businessplan.com';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.businessplan.com';
 const API_TIMEOUT = 5000; // 5 seconds timeout
 
 // Generic API fetch function with error handling
@@ -74,7 +74,7 @@ const fetchFromAPI = async (endpoint: string): Promise<any> => {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.VITE_API_TOKEN || ''}`,
+        'Authorization': `Bearer ${import.meta.env.VITE_API_TOKEN || ''}`,
       },
       signal: controller.signal,
     });
